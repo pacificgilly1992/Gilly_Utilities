@@ -17,10 +17,13 @@ elif getattr(sys.version_info, 'major') == 3:
 else:
     raise ImportError("Unable to detect the version of python you are using!")
 
+# Compatability for python3
+if getattr(sys.version_info, 'major') == 3:
+	xrange = range
+
 import numpy as np
 import pandas as pd
 
-from StringIO import StringIO
 from .extras import cprint
 
 class DelayedKeyboardInterrupt(object):

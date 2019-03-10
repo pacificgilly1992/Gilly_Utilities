@@ -1,4 +1,5 @@
 from __future__ import absolute_import, division, print_function
+import sys
 import time, os, warnings
 import numpy as np
 from datetime import datetime
@@ -10,6 +11,10 @@ from matplotlib.dates import DateFormatter, MinuteLocator, HourLocator, DayLocat
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from .system import isarray, arrlen
+
+# Compatability for python3
+if getattr(sys.version_info, 'major') == 3:
+	xrange = range
 
 def colorbar(mappable, loc="right", size="5%", pad=0.05):
     """Fixes location of colour bar to the mappable plot

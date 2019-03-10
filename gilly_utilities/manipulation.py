@@ -6,6 +6,10 @@ from copy import deepcopy
     
 from .system import isarray, isnumeric
 
+# Compatability for python3
+if getattr(sys.version_info, 'major') == 3:
+	xrange = range
+
 class array:
     """Fastest method of combining data for very large dataset. Much faster than
     np.append, or x.extend/append. Boo

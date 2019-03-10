@@ -1,11 +1,15 @@
 __version__ = 1.1
-
+import sys
 import numpy as np
 from datetime import datetime
 import warnings 
 
 from .manipulation import array, flatten
 from .datetime64 import isnat, dt2hours, hours2dt
+
+# Compatability for python3
+if getattr(sys.version_info, 'major') == 3:
+	xrange = range
 
 def antifinite(x, andxor=True, unpack=False, sortby=False):
     """This will remove the np.nan and np.inf values by removing rows which contain them.

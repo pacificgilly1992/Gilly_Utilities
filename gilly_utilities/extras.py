@@ -1,7 +1,12 @@
 from __future__ import absolute_import, division, print_function
+import sys
 import matplotlib.pyplot as plt
 from matplotlib import transforms
 from itertools import takewhile
+
+# Compatability for python3
+if getattr(sys.version_info, 'major') == 3:
+	xrange = range
 
 #Define alphabet
 alphabet = list('abcdefghijklmnopqrstuvwxyz')
