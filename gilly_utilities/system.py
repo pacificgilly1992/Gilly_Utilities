@@ -8,8 +8,14 @@ import errno
 import signal
 import logging
 import collections
-import urllib2
 import warnings
+
+if getattr(sys.version_info, 'major') == 2:
+    import urlllib2
+elif getattr(sys.version_info, 'major') == 3:
+    import urllib.requests as urllib2
+else:
+    raise ImportError("Unable to detect the version of python you are using!")
 
 import numpy as np
 import pandas as pd
