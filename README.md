@@ -7,3 +7,7 @@ I adore you to have a look around at the code and find something that you'll fin
 Citing Gilly Utilities couldn't be easier. How about a DOI?
 
 [![DOI](https://zenodo.org/badge/158018663.svg)](https://zenodo.org/badge/latestdoi/158018663)
+
+# Python 3 Compatability
+
+Gilly utilities works for python 3 now. Most functions work, but not all

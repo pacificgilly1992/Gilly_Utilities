@@ -9,12 +9,10 @@ from .plotting import backend_changer
 
 import matplotlib.pyplot as plt 
 
-__version__ = 1.2
-
-#TEMP
-sys.path.insert(0,'/home/users/th863480/PhD/Global_Functions/')
-#from Data_Output import SPMods
-
+# Compatability for python3
+if getattr(sys.version_info, 'major') == 3:
+	xrange = range
+	
 def rain_rate(time, counts_or_tips, tip_bucket_size=None, drop_counter_size=None, drop_size=None, mask=True):
     """This universal function can convert both tipping bucket, drop counter and
     disdrometer rain gauge data into a rain rate.

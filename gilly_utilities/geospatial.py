@@ -1,9 +1,14 @@
 from __future__ import absolute_import
+import sys
 import numpy as np
 from math import cos,sin,acos,asin,tan  
 from math import degrees as deg, radians as rad  
 from datetime import date,datetime,time  
   
+# Compatability for python3
+if getattr(sys.version_info, 'major') == 3:
+	xrange = range
+	
 class Earth:  
 	"""  
 	Calculate sunrise and sunset based on equations from NOAA 

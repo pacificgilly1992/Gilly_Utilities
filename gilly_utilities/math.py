@@ -1,4 +1,5 @@
 from __future__ import absolute_import, division, print_function
+import sys
 import numpy as np
 import itertools, warnings
 import time as systime
@@ -7,6 +8,10 @@ from .manipulation import argnear
 
 __doc__ = "Built for Python 2.7. Upgrading to Python 3.7 soon!"
 
+# Compatability for python3
+if getattr(sys.version_info, 'major') == 3:
+	xrange = range
+	
 def argpercentile(x, percentile):
     """Outputs the index of the percentile value for the data.
     

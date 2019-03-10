@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import pandas as pd
 import warnings, sys
@@ -5,6 +6,10 @@ from datetime import date, datetime, timedelta
 from datetime import time as dttime
 
 from .system import isarray
+
+# Compatability for python3
+if getattr(sys.version_info, 'major') == 3:
+	xrange = range
 
 def time32(when='now', dtype='str'):
     """Output the time in different formats
