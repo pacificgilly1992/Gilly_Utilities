@@ -414,20 +414,20 @@ def Lineariser_Power_v3(endog, exog, initial=1, maxits=1000, prec=10**-7, weight
         #Optimise power coefficient
         for i in xrange(maxits):
             X2 = np.column_stack((power(exog, coeff_power-0.1/sw), np.ones(len(exog))))
-            YX = antinan(np.column_stack((endog, X2)).T) if weights is None else antinan(np.column_stack((endog, X2, weights)).T)
+            YX = antifinite(np.column_stack((endog, X2)), oldmethod=False) if weights is None else antifinite(np.column_stack((endog, X2, weights)), oldmethod=False)
 
-            model = sm.OLS(YX[:,0], YX[:,1:]) if weights is None else sm.WLS(YX[:,0], YX[:,1:-1], weights=YX[:,-1]) 
-            res_min = model.fit().rsquared
+            model1 = sm.OLS(YX[:,0], YX[:,1:]) if weights is None else sm.WLS(YX[:,0], YX[:,1:-1], weights=YX[:,-1]) 
+            res_min = model1.fit().rsquared
             
             X2 = np.column_stack((power(exog, coeff_power), np.ones(len(exog))))
-            YX = antinan(np.column_stack((endog, X2)).T) if weights is None else antinan(np.column_stack((endog, X2, weights)).T)        
-            model = sm.OLS(YX[:,0], YX[:,1:]) if weights is None else sm.WLS(YX[:,0], YX[:,1:-1], weights=YX[:,-1]) 
-            res = model.fit().rsquared
+            YX = antifinite(np.column_stack((endog, X2)), oldmethod=False) if weights is None else antifinite(np.column_stack((endog, X2, weights)), oldmethod=False)        
+            model2 = sm.OLS(YX[:,0], YX[:,1:]) if weights is None else sm.WLS(YX[:,0], YX[:,1:-1], weights=YX[:,-1]) 
+            res = model2.fit().rsquared
             
             X2 = np.column_stack((power(exog, coeff_power+0.1/sw), np.ones(len(exog))))
-            YX = antinan(np.column_stack((endog, X2)).T) if weights is None else antinan(np.column_stack((endog, X2, weights)).T)        
-            model = sm.OLS(YX[:,0], YX[:,1:]) if weights is None else sm.WLS(YX[:,0], YX[:,1:-1], weights=YX[:,-1])  
-            res_plus = model.fit().rsquared
+            YX = antifinite(np.column_stack((endog, X2)), oldmethod=False) if weights is None else antifinite(np.column_stack((endog, X2, weights)), oldmethod=False)        
+            model3 = sm.OLS(YX[:,0], YX[:,1:]) if weights is None else sm.WLS(YX[:,0], YX[:,1:-1], weights=YX[:,-1])  
+            res_plus = model3.fit().rsquared
             
             if (res_min > res) &  (res > res_plus):
                 coeff_power -= 0.1/sw
@@ -451,10 +451,11 @@ def Lineariser_Power_v3(endog, exog, initial=1, maxits=1000, prec=10**-7, weight
             sw_all.append(sw)
             
             if np.abs((res - res_min) + (res - res_plus)) < prec: break
+            
         if i == maxits-1: warnings.warn("Maximum iterations (%.0f) reached and precision of the R squared value was not found!" % (maxits), UserWarning, stacklevel=2)
         
         X2 = np.column_stack((power(exog, coeff_power), np.ones(len(exog))))
-        YX = antinan(np.column_stack((endog, X2)).T)    if weights is None else antinan(np.column_stack((endog, X2, weights)).T)
+        YX = antifinite(np.column_stack((endog, X2)), oldmethod=False)    if weights is None else antifinite(np.column_stack((endog, X2, weights)), oldmethod=False)
 
         model = sm.OLS(YX[:,0], YX[:,1:]) if weights is None else sm.WLS(YX[:,0], YX[:,1:-1], weights=YX[:,-1]) 
         res_final = model.fit()
@@ -476,17 +477,17 @@ def Lineariser_Power_v3(endog, exog, initial=1, maxits=1000, prec=10**-7, weight
                 for i in xrange(maxits):
                     
                     X2 = np.column_stack((power(exog, coeff_power-0.1/sw), np.ones(len(exog))))
-                    YX = antinan(np.column_stack((Bootstrap, X2)).T)    if weights is None else antinan(np.column_stack((endog, X2, weights)).T)        
+                    YX = antifinite(np.column_stack((Bootstrap, X2)), oldmethod=False)    if weights is None else antifinite(np.column_stack((endog, X2, weights)), oldmethod=False)        
                     model = sm.OLS(YX[:,0], YX[:,1:])if weights is None else sm.WLS(YX[:,0], YX[:,1:-1], weights=YX[:,-1]) 
                     res_min = model.fit().rsquared
                     
                     X2 = np.column_stack((power(exog, coeff_power), np.ones(len(exog))))
-                    YX = antinan(np.column_stack((Bootstrap, X2)).T)    if weights is None else antinan(np.column_stack((endog, X2, weights)).T)        
+                    YX = antifinite(np.column_stack((Bootstrap, X2)), oldmethod=False)    if weights is None else antifinite(np.column_stack((endog, X2, weights)), oldmethod=False)        
                     model = sm.OLS(YX[:,0], YX[:,1:]) if weights is None else sm.WLS(YX[:,0], YX[:,1:-1], weights=YX[:,-1]) 
                     res = model.fit().rsquared
                     
                     X2 = np.column_stack((power(exog, coeff_power+0.1/sw), np.ones(len(exog))))
-                    YX = antinan(np.column_stack((Bootstrap, X2)).T)    if weights is None else antinan(np.column_stack((endog, X2, weights)).T)        
+                    YX = antifinite(np.column_stack((Bootstrap, X2)), oldmethod=False)    if weights is None else antifinite(np.column_stack((endog, X2, weights)), oldmethod=False)        
                     model = sm.OLS(YX[:,0], YX[:,1:]) if weights is None else sm.WLS(YX[:,0], YX[:,1:-1], weights=YX[:,-1]) 
                     res_plus = model.fit().rsquared
                     

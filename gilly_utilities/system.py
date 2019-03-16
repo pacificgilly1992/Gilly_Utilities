@@ -11,7 +11,7 @@ import collections
 import warnings
 
 if getattr(sys.version_info, 'major') == 2:
-    import urlllib2
+    import urllib2
 elif getattr(sys.version_info, 'major') == 3:
     import urllib.request as urllib2
 else:
@@ -84,7 +84,7 @@ class unbuffered(object):
     Usage
     -----
     import sys
-    import Gilly_Utilities as gu
+    import gilly_utilities as gu
 
     sys.stdout = gu.unbuffered(sys.stdout)
     
@@ -186,7 +186,70 @@ def isnone(arg, keepshape=True):
     else:
         return nones
 
-
+def iszero(arg, keepshape=True):
+    """
+    Test element-wise for zeros.
+    
+    The result is returned as a boolean array.
+    """
+    
+    # Force arg to be a numpy array
+    arg = np.atleast_1d(arg)
+    zero_full = np.zeros(arg.shape, dtype=bool)
+    
+    # Create index array of arg to reorganise after we need to flatten arg
+    index = np.arange(arg.size).reshape(arg.shape)
+    
+    # Flatten arg array
+    arg = np.hstack(arg.flat)
+    index_flat = np.hstack(index)
+    
+    # Check for zeros
+    zeros = np.array([val == 0 for val in arg], dtype=bool)
+    
+    if keepshape is True:
+        
+        # Return a restructured array
+        for ind, val in zip(index_flat, zeros):
+            zero_full[np.where(index == ind)] = val
+        
+        return zero_full
+    
+    else:
+        return zeros
+        
+def isval(arg, value, keepshape=True):
+    """
+    Test element-wise for specific value.
+    
+    The result is returned as a boolean array.
+    """
+    
+    # Force arg to be a numpy array
+    arg = np.atleast_1d(arg)
+    zero_full = np.zeros(arg.shape, dtype=bool)
+    
+    # Create index array of arg to reorganise after we need to flatten arg
+    index = np.arange(arg.size).reshape(arg.shape)
+    
+    # Flatten arg array
+    arg = np.hstack(arg.flat)
+    index_flat = np.hstack(index)
+    
+    # Check for zeros
+    zeros = np.array([val == value for val in arg], dtype=bool)
+    
+    if keepshape is True:
+        
+        # Return a restructured array
+        for ind, val in zip(index_flat, zeros):
+            zero_full[np.where(index == ind)] = val
+        
+        return zero_full
+    
+    else:
+        return zeros
+    
 """
 Works out the length of string arrays element-wise
 
