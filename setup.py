@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="gilly-utilities",
-    version="0.9.3",
+    version="0.9.4",
     author="James Gilmore",
     author_email="jamesgillygilmore@gmail.com",
     description="A data analysis package built upon Numpy, SciPy and Pandas",

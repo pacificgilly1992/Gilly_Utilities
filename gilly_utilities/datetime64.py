@@ -419,7 +419,7 @@ def isdatetime(arr):
 
     # First, test whether all values are datetime compatible (Quick-Easy method)
     try:
-        arr.view('datetime64[s]')
+        np.issubdtype(arr.dtype, np.datetime64)
         return np.full(arr.size, True, dtype=bool)
     except TypeError:
         # Second, test each element in turn
