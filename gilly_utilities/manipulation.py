@@ -652,7 +652,25 @@ def int2bool(arr, int):
     arr[~int] = False
     
     return np.invert(arr.astype(bool))
-        
+
+def combine_bools(arr):
+    """
+    Combines all boolean arrays in arr which all have the same length.
+    If any array has False, the output will also be False.
+    
+    >>> a = [True, False, True, True]
+    >>> b = [False, True, True, True]
+    >>> combine_bools((a, b))
+    array([False, False, True, True])
+    
+    """
+    
+    bools = ~np.asarray(arr[0])
+    for elem in arr[1:]:
+        bools |= ~np.asarray(elem)
+     
+    return ~bools
+    
 def strip(array, mask=""):
     """Removes all mask values in an array.
     

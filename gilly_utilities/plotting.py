@@ -267,46 +267,33 @@ def backend_checker(show_supported=False, show_valid=False):
     for backend, fps in zip(backends_available, backends_fps):
         print("%s       \t%.4f" % (backend, fps))
 
-def fixed_aspect_ratio(plt=None, ax=None, ratio=1, adjustable=None, xscale='linear', yscale='linear'):
-    """Set a fixed aspect ratio on Matplotlib plots 
-    regardless of axis units
-    
-    *** BEST FUNCTION ***
+def fixed_aspect_ratio(ax, ratio=1, adjustable=None, xscale='linear', yscale='linear'):
+    """
+    Set a fixed aspect ratio on Matplotlib plots regardless of axis 
+    units. Can handle all scale types (e.g. linear-linear, log-log
+    and semilog plots).
     
     Notes
     -----
     This function must be called after all plotting has been completed.
     i.e. just before plt.savefig.
     
-    Warnings
-    --------
-    Can handle linear-linear and log-log plots but not semilog plots.
-    
     Reference
     ---------
     https://stackoverflow.com/a/37340384
     https://stackoverflow.com/a/39807336
+    https://stackoverflow.com/a/24538164
     """
     
-    if plt is None and ax is None: raise SyntaxError("[gu.fixed_aspect_ratio]: Must specify either plt or ax plots.")
-    if plt is not None and ax is not None: raise SyntaxError("[gu.fixed_aspect_ratio]: Can only specify either plt or ax, not both.")
-    
+    # Set scales for both axes
+    ax.set_xscale(xscale)
+    ax.set_yscale(yscale)
+            
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        
-        if plt is not None:
-            #Get axis limits
-            xvals, yvals = (gca().axes.get_xlim(), gca().axes.get_ylim())
-            
-            #Compute axis range
-            xrange = xvals[1] - xvals[0] if xscale == 'linear' else np.log(xvals[1]) - np.log(xvals[0])
-            yrange = yvals[1] - yvals[0] if yscale == 'linear' else np.log(yvals[1]) - np.log(yvals[0])
-            
-            #Force aspect
-            gca().set_aspect(ratio*(xrange/yrange), adjustable=adjustable)
-                    
-        elif ax is not None:
-            if isinstance(ax,np.ndarray):
+    
+        if xscale == yscale:
+            if isinstance(ax, np.ndarray):
                 ax = ax.ravel()
                 
                 for subplot in ax:
@@ -329,29 +316,56 @@ def fixed_aspect_ratio(plt=None, ax=None, ratio=1, adjustable=None, xscale='line
 
                 #Force aspect
                 ax.set_aspect(ratio*(xrange/yrange), adjustable=adjustable)
-    
-    return    
+
+        # Add support for mixed scale axes in Matplotlib
+        elif xscale != yscale:
             
-def forceAspect(fig, aspect=1):
-    """Forces figure, fig to have an aspect ratio, aspect
-    
-    Reference
-    ---------
-    https://stackoverflow.com/a/7968690/8765762
-    """
-        
-    xsize,ysize = fig.get_size_inches()
-    minsize = min(xsize,ysize)
-    xlim = .4*minsize/xsize
-    ylim = .4*minsize/ysize
-    if aspect < 1:
-        xlim *= aspect
-    else:
-        ylim /= aspect
-    fig.subplots_adjust(left=.5-xlim,
-                        right=.5+xlim,
-                        bottom=.5-ylim,
-                        top=.5+ylim)
+            # Check if minor ticks were enabled
+            if len(ax.xaxis.get_minor_ticks()) > 0:
+                minor_ticks = True
+            else:
+                minor_ticks = False
+                
+            # Get the figure size in real coordinates:
+            f = plt.gcf()
+            fwidth = f.get_figwidth()
+            fheight = f.get_figheight()
+
+            # get the axis size and position in relative coordinates
+            # this gives a BBox object
+            bb = ax.get_position()
+
+            # calculate them into real world coordinates
+            axwidth = fwidth * (bb.x1 - bb.x0)
+            axheight = fheight * (bb.y1 - bb.y0)
+
+            # if the axis is wider than tall, then it has to be narrower
+            if axwidth > axheight:
+                # calculate the narrowing relative to the figure
+                narrow_by = (axwidth - axheight) / fwidth
+                
+                # move bounding box edges inwards the same amount to give the correct width
+                bb.x0 += narrow_by / 2
+                bb.x1 -= narrow_by / 2
+                
+            # else if the axis is taller than wide, make it vertically smaller
+            # works the same as above
+            elif axheight > axwidth:
+                shrink_by = (axheight - axwidth) / fheight
+                bb.y0 += shrink_by / 2
+                bb.y1 -= shrink_by / 2
+            
+            # Set the new position for the plot
+            ax.set_position(bb)
+            
+            # Turn on minor_ticks
+            if minor_ticks:
+                ax.tick_params(axis='both', which='both')
+
+        else:
+            raise ValueError("Something went really wrong. xscale != yscale and xscale == yscale was found to be both False!")
+
+    return    
 
 def get_aspect(ax=None):
     """Gets aspect ratio of an axes
