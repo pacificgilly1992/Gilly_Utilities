@@ -13,15 +13,17 @@ import matplotlib.pyplot as plt
 if getattr(sys.version_info, 'major') == 3:
 	xrange = range
 	
-def rain_rate(time, counts_or_tips, tip_bucket_size=None, drop_counter_size=None, drop_size=None, mask=True):
-    """This universal function can convert both tipping bucket, drop counter and
-    disdrometer rain gauge data into a rain rate.
+def rain_rate(time, counts_or_tips, tip_bucket_size=None, 
+        drop_counter_size=None, drop_size=None, mask=True):
+    """
+    This universal function can convert both tipping bucket, drop 
+    counter and disdrometer rain gauge data into a rain rate.
     
     Parameters
     ----------
     time : list or array
-        The time values in either hour fraction, datetime or np.datetime64 format.
-        If any other float or integer specification of time is used (e.g. day 
+        The time values in either hour fraction, datetime or 
+        np.datetime64 format. If any other float or integer specification of time is used (e.g. day 
         fraction or second) the outputted rain rate will need to corrected. The
         time is expected to be sorted.
     counts_or_tips : list or array
@@ -53,19 +55,17 @@ def rain_rate(time, counts_or_tips, tip_bucket_size=None, drop_counter_size=None
         
     """
     
+    # Check the inputs to function
     if time is None or counts_or_tips is None: 
-        #print(11111111111111111)
         return None, None, None
     if not isinstance(time, np.ndarray) or isinstance(time, list): 
-        #print(22222222222222222)
         return None, None, None
     if len(time) < 10: 
-        #print(33333333333333333)
         return None, None, None
     
-    #Force time to be in hours
+    # Force time to be in hours
     time = dt2hours(time, time[0])
-    counts_or_tips = np.asarray(counts_or_tips)
+    counts_or_tips = np.atleast_1d(counts_or_tips)
     
     if counts_or_tips.ndim == 1:
         if (drop_counter_size is None and drop_size is None) & (np.max(counts_or_tips) == 1 or tip_bucket_size is not None):
@@ -120,45 +120,53 @@ def rain_rate(time, counts_or_tips, tip_bucket_size=None, drop_counter_size=None
             return None, None, None
             
     else:
+        
+        # Transpose counts array
+        counts_or_tips = counts_or_tips.T
+        
+        # Unravel drop size
+        drop_size = drop_size.ravel()
+        
         if mask is True:
-            try:
-                if np.sum(np.sum(counts_or_tips, axis=1) > 1) > 20:
-                    """DISDROMETER"""
-                    
-                    """Calculation method based on Islam T. et al. (2012)"""
-                                    
-                    #Constants
-                    A = 0.005 #m^2
-                    dt = np.round(np.nanmean(np.diff(time)*3600)) #~ 10s
-                    
-                    Rain_Mask = np.sum(counts_or_tips, axis=1) > 1
-                    Time_Disd = 0.5*np.diff(time[Rain_Mask])+time[Rain_Mask][:-1]; Time_Disd = np.append(Time_Disd, Time_Disd[0]-dt/3600); Time_Disd = np.append(Time_Disd, Time_Disd[-1]+dt/3600)
-                    Mag_Disd = counts_or_tips[Rain_Mask]
-                            
-                    #Static Variables (i.e. They DON'T change over each time step)
-                    v = 3.78*drop_size**0.67
-                    D = drop_size.copy()**3.67
-                    dD = 2*np.diff(drop_size); dD = np.append(dD, dD[-1])
-                    
-                    #Dynamic Variables (i.e. They DO change over each time step)
-                    Nm = Mag_Disd/(A*dt*v*dD)
-                    Rain_RR = (3.78*np.pi*np.nansum(D*Nm*dD, axis=1)/6)/(3600/dt)
-                    Time_RR = time[Rain_Mask]
-                    
-                    #print("Time_Disd", "Time_RR", "Rain_RR")
-                    #print(Time_Disd.shape, Time_RR.shape, Rain_RR.shape)
-                    
-                    return Time_Disd, Time_RR, Rain_RR
-                    
-                else:
-                    #print(55555555555555555)
-                    return None, None, None
-            except:
-                print("counts_or_tips", counts_or_tips)
-                print("counts_or_tips", type(counts_or_tips))
-                print("counts_or_tips", len(counts_or_tips))
-                print("counts_or_tips", counts_or_tips.shape)
-                print("counts_or_tips", counts_or_tips.dtype)
+            #try:
+            if np.sum(np.sum(counts_or_tips, axis=1) > 1) > 20:
+                """DISDROMETER"""
+                
+                """Calculation method based on Islam T. et al. (2012)"""
+
+                # Constants
+                A = 0.005 # m^2
+                dt = np.round(np.nanmean(np.diff(time) * 3600)) # ~ 10s
+                
+                Rain_Mask = np.sum(counts_or_tips, axis=1) > 1
+                Time_Disd = 0.5 * np.diff(time[Rain_Mask]) + time[Rain_Mask][:-1] 
+                Time_Disd = np.append(Time_Disd, Time_Disd[0] - dt / 3600)
+                Time_Disd = np.append(Time_Disd, Time_Disd[-1] + dt / 3600)
+                Mag_Disd = counts_or_tips[Rain_Mask]
+                        
+                #Static Variables (i.e. They DON'T change over each time step)
+                v = 3.78*drop_size**0.67
+                D = drop_size.copy()**3.67
+                dD = 2*np.diff(drop_size); dD = np.append(dD, dD[-1])
+                
+                #Dynamic Variables (i.e. They DO change over each time step)
+                Nm = Mag_Disd/(A*dt*v*dD)
+                Rain_RR = (3.78*np.pi*np.nansum(D*Nm*dD, axis=1)/6)/(3600/dt)
+                Time_RR = time[Rain_Mask]
+                
+                #print("Time_Disd", "Time_RR", "Rain_RR")
+                #print(Time_Disd.shape, Time_RR.shape, Rain_RR.shape)
+                
+                return Time_Disd, Time_RR, Rain_RR
+                
+            else:
+                return None, None, None
+            # except:
+                # print("counts_or_tips", counts_or_tips)
+                # print("counts_or_tips", type(counts_or_tips))
+                # print("counts_or_tips", len(counts_or_tips))
+                # print("counts_or_tips", counts_or_tips.shape)
+                # print("counts_or_tips", counts_or_tips.dtype)
         else:
             """DISDROMETER"""
                 
@@ -281,13 +289,13 @@ def Cloud_Identifer(Time, Sg, Sd):
         
         Diffuse_Fraction = Sd/Sg
 
-        if np.mean(Diffuse_Fraction) >= 0.9:     #Overcast
+        if np.nanmean(Diffuse_Fraction) >= 0.9:     #Overcast
             Cloud_Type = 2
-        elif np.mean(Diffuse_Fraction) <= 0.3:     #Clear
+        elif np.nanmean(Diffuse_Fraction) <= 0.3:     #Clear
             Cloud_Type = 1
-        elif np.std(Diffuse_Fraction) <= 0.05:     #Cumuliform
+        elif np.nanstd(Diffuse_Fraction) <= 0.05:     #Cumuliform
             Cloud_Type = 4
-        elif np.std(Diffuse_Fraction) >= 0.1:     #Stratiform
+        elif np.nanstd(Diffuse_Fraction) >= 0.1:     #Stratiform
             Cloud_Type = 3
         else:                                    #Unclassified
             Cloud_Type = 5
@@ -311,13 +319,13 @@ def Cloud_Identifer(Time, Sg, Sd):
             
                 Diffuse_Fraction = Sd[Mask]/Sg[Mask]
                 
-                if np.mean(Diffuse_Fraction) >= 0.9:     #Overcast
+                if np.nanmean(Diffuse_Fraction) >= 0.9:     #Overcast
                     Cloud_Type[i] = 2
-                elif np.mean(Diffuse_Fraction) <= 0.3:     #Clear
+                elif np.nanmean(Diffuse_Fraction) <= 0.3:     #Clear
                     Cloud_Type[i] = 1
-                elif np.std(Diffuse_Fraction) <= 0.05:     #Cumuliform
+                elif np.nanstd(Diffuse_Fraction) <= 0.05:     #Cumuliform
                     Cloud_Type[i] = 4
-                elif np.std(Diffuse_Fraction) >= 0.1:     #Stratiform
+                elif np.nanstd(Diffuse_Fraction) >= 0.1:     #Stratiform
                     Cloud_Type[i] = 3
                 else:                                    #Unclassified
                     Cloud_Type[i] = 5

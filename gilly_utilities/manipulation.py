@@ -3,12 +3,12 @@ import numpy as np
 import sys, warnings
 import time as systime
 from copy import deepcopy
-    
-from .system import isarray, isnumeric
+
+import gilly_utilities.system
 
 # Compatability for python3
 if getattr(sys.version_info, 'major') == 3:
-	xrange = range
+    xrange = range
 
 class array:
     """Fastest method of combining data for very large dataset. Much faster than
@@ -426,7 +426,7 @@ def flatten(array, type=None, dtype=None, level=1, generator=False):
                         try:
                             return np.array(array, dtype=array.dtype)
                         except ValueError:
-                            raise UserWarning('[Error] Cannot convert to NumPy. Returning as a list instead')
+                            UserWarning('[Error] Cannot convert to NumPy. Returning as a list instead')
                             return array
                     else:
                         warnings.warn('\n[flatten]: A dtype must be specified if the input array is a list and you want the output array to be numpy. Numpy will estimate the data type automatically!', SyntaxWarning, stacklevel=2)
@@ -435,10 +435,10 @@ def flatten(array, type=None, dtype=None, level=1, generator=False):
                     try:
                         return np.array(array, dtype=dtype)
                     except ValueError:
-                        raise UserWarning('[Error] Cannot convert to NumPy. Returning as a list instead')
+                        UserWarning('[Error] Cannot convert to NumPy. Returning as a list instead')
                         return array
             else:
-                raise UserWarning('[Error] Input array to flatten must be either a list or ndarray. Returning empty array.')
+                UserWarning('[Error] Input array to flatten must be either a list or ndarray. Returning empty array.')
                 return []
         else:
             if isinstance(array, list):
@@ -448,16 +448,16 @@ def flatten(array, type=None, dtype=None, level=1, generator=False):
                     try:
                         return np.array(array, dtype=array.dtype)
                     except ValueError:
-                        raise UserWarning('[Error] Cannot convert to NumPy. Returning as a list instead')
+                        UserWarning('[Error] Cannot convert to NumPy. Returning as a list instead')
                         return array
                 else:
                     try:
                         return np.array(array, dtype=dtype)
                     except ValueError:
-                        raise UserWarning('[Error] Cannot convert to NumPy. Returning as a list instead')
+                        UserWarning('[Error] Cannot convert to NumPy. Returning as a list instead')
                         return array
             else:
-                raise UserWarning('[Error] Input array to flatten must be either a list or ndarray. Returning empty array.')
+                UserWarning('[Error] Input array to flatten must be either a list or ndarray. Returning empty array.')
                 return []
     else:
         return array
@@ -596,7 +596,7 @@ def truncate(a, floor=True):
     """
     
     # Error check
-    if not isnumeric(a): 
+    if not gilly_utilities.system.isnumeric(a): 
         raise ValueError("truncate requires a single numerical value")
     
     # Truncate the input numeric
@@ -648,10 +648,13 @@ def int2bool(arr, int):
     N.B. Output will be a boolean array of size arr. This can be used to select the elements in arr in the
     same way as just using the int array."""
     
-    arr[int] = True
-    arr[~int] = False
+    # Create False array with size equalling arr
+    arr_bool = np.full(arr.size, False)
     
-    return np.invert(arr.astype(bool))
+    # For all index values, set arr_bool to True
+    arr_bool[int] = True
+    
+    return arr_bool
 
 def combine_bools(arr):
     """
@@ -765,8 +768,8 @@ def contiguous(x, min=1, invalid=None, bounds=False):
     
     #Check to see if cloud exists along day boundary. If so we add in manual time boundaries
     if x_mask[0] != 0: x_bounds = np.insert(x_bounds, 0, 0)
-    if x_mask[-1] != 0: x_bounds = np.append(x_bounds, x_mask.size); 
-    #if x_mask[-1] != 0: x_bounds = np.append(x_bounds, x_mask.size-1); 
+    #if x_mask[-1] != 0: x_bounds = np.append(x_bounds, x_mask.size); 
+    if x_mask[-1] != 0: x_bounds = np.append(x_bounds, x_mask.size-1); 
     #if x_mask[-1] != 0: x_bounds = np.append(x_bounds, Temp_Mask); 
     x_bounds = x_bounds.reshape(int(x_bounds.size/2),2)
 
@@ -1302,7 +1305,7 @@ def string_checker(strings, test_strings, condition='all'):
     
     if isinstance(strings, str):
         strings = [strings]
-    elif isarray(strings):
+    elif gilly_utilities.system.isarray(strings):
         if len(strings) == 0:
             return False
     else:

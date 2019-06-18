@@ -114,4 +114,4 @@ dmypy.json
 .pyre/
 
 # User defined
-Backups/
+*.stackdump
