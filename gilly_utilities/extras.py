@@ -1,26 +1,31 @@
 from __future__ import absolute_import, division, print_function
 import sys
+import time
+import warnings
 import matplotlib.pyplot as plt
 from matplotlib import transforms
 from itertools import takewhile
 
 # Compatability for python3
 if getattr(sys.version_info, 'major') == 3:
-	xrange = range
+    xrange = range
 
 #Define alphabet
 alphabet = list('abcdefghijklmnopqrstuvwxyz')
 
-def inheritors(klass):
-    subclasses = set()
-    work = [klass]
-    while work:
-        parent = work.pop()
-        for child in parent.__subclasses__():
-            if child not in subclasses:
-                subclasses.add(child)
-                work.append(child)
-    return list(subclasses)
+# Specify the time when module was initalised. Used in progress if
+# t_initial was not specified.
+t_initial_master = time.time()
+
+# Used for progress class
+eps = sys.float_info.epsilon
+
+class ProgressWarning(UserWarning):
+    """Issued when results may be unstable."""
+    pass
+
+# On import, make sure that InstabilityWarnings are not filtered out.
+warnings.simplefilter('always', ProgressWarning)
 
 class prettyfloat(object):
     """returns a truncated float of 2 decimal places.
@@ -42,7 +47,159 @@ class prettyfloat(object):
 
     def __repr__(self):
         return "%0.*f" % (self.dec, self.float)
+
+class progress(object):
+    """
+    Outputs the progress of interable (e.g. loop) to the console.
     
+    Examples
+    --------
+    >>> size = 10
+    >>> message = "Hello %s. My name is %s"
+    >>> with gu.progress(message, size) as progress:
+    >>>     for i in xrange(size):
+    >>>         time.sleep(.5)
+    >>>         progress.update("James", "Brian")
+    """
+
+    def __init__(self, msg, size, confirmation=True):
+        """
+        Makes a note of the time progress was called.
+        
+        Parameters
+        ----------
+        size : int
+            the size of the iterator to progress
+        """
+
+        # Initalise parameters
+        self.t_initial = time.time()
+        self.msg = str(msg)
+        self.size = int(size)
+        self.i = 0
+        self.confirmation = confirmation
+
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, type, value, traceback):
+
+        # Remove last line in command line
+        sys.stdout.write("\033[K")
+        
+        # Output the final message to user
+        if self.confirmation:
+            cprint("[INFO] Iterator Completed (In %.4fs)" \
+                    % (time.time() - self.t_initial))
+        
+    def _timestats(self):
+        """
+        Calculate the time statistics of the iterator.
+        """
+
+        t_elapsed = time.time() - self.t_initial
+        t_remain  = (t_elapsed / (self.i + eps)) * \
+                    (self.size - self.i + eps)
+
+        return t_elapsed, t_remain
+
+    def _message(self, args):
+        """
+        Build message to print to output.
+        """
+
+        full_message = "[INFO] Time Elapsed: %.0fs. Time Remaining: %.0fs. " \
+                         + self.msg + "\r"
+        sys.stdout.write(full_message % tuple(args))
+        sys.stdout.flush()
+
+    def _error(self):
+        """
+        Check if iterator has gone above size originally specified.
+        """
+
+        # Increment iterator
+        self.i += 1
+
+        if self.i > self.size:
+            warnings.warn("size of progress was not specified correctly. " \
+                          "You'll notice negative values in time remaining!", 
+                          ProgressWarning, stacklevel=3)
+
+    def update(self, *args):
+        """
+        Update the progress of the iterator.
+        """
+
+        # Remove last line in command line
+        sys.stdout.write("\033[K")
+
+        # Calculate time statistics
+        t_elapsed, t_remain = self._timestats()
+
+        # Build message
+        self._message(_flat((t_elapsed, t_remain, args)))
+
+        # Error checker
+        self._error()
+
+def _flat(array, level=1):
+    """
+    Flatten a list of (lists of (lists of strings)) for any level 
+    of nesting
+    
+    Parameters
+    ----------
+    array : array_like, string
+        An array_like object containing all string values.
+    level : int, optional
+        The number of nested levels to remove. Specify -1 to removed all
+        nests automatically.
+        
+    Returns
+    -------
+    x : generator
+        The flattened array is returned as a generator. Use as an 
+        iterator, or used list(x) to return values.
+    
+    Reference
+    ---------
+    https://stackoverflow.com/a/17864492
+    https://stackoverflow.com/a/5286571/8765762
+    
+    Notes
+    -----
+    Only works with both Python 2.x and 3.x
+    
+    """
+    
+    for x in array:
+        
+        # If desired level of nesting reached, yield x
+        if level == 0:
+            yield x
+        
+        # Else if not a string level, go down another level
+        elif hasattr(x, '__iter__') and not isinstance(x, str):
+            for y in _flat(x, level=level-1):
+                yield y
+
+        # If at string level, then yield x
+        else:
+            yield x
+
+
+def inheritors(klass):
+    subclasses = set()
+    work = [klass]
+    while work:
+        parent = work.pop()
+        for child in parent.__subclasses__():
+            if child not in subclasses:
+                subclasses.add(child)
+                work.append(child)
+    return list(subclasses)
+   
 def rainbow_text(x, y, strings, colors, ax=None, **kw):
     """
     Take a list of ``strings`` and ``colors`` and place them next to each

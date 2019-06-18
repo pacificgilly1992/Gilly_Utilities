@@ -17,7 +17,7 @@ from .manipulation import stride, broadcast, digitize, searchsorted
 from .nanfunctions import antinan, antifinite
 from .math import power
 
-# Import statistical bootstrapping  library
+# Import statistical bootstrapping library
 from scikits.bootstrap import bootstrap as boot
 
 femto = sys.float_info.epsilon
@@ -60,7 +60,7 @@ def naive_covariance(data1, data2):
     for i1, i2 in zip(data1, data2):
         sum12 += i1*i2
 
-    covariance = (sum12 - sum1*sum2 / n) / n
+    covariance = (sum12 - sum1*sum2 / n) / (n - 1)
     
     return covariance
     
@@ -576,25 +576,28 @@ def TheilSenRegression(x,y, n_subsamples=None, random_state=42):
     
     return line_x, y_predict, estimator.coef_, estimator.intercept_, r_value
 
-def HuberRegression(x,y,epsilon=1.36, package='statsmodel'):
-    """Calculates the Huber linear regression model. Like the Theil-Sen model, the Huber is 
-    resilient to outliers present in the data. 
+def HuberRegression(x,y, epsilon=1.36, package='statsmodel'):
+    """
+    Calculates the Huber linear regression model. Like the Theil-Sen 
+    model, the Huber is resilient to outliers present in the data. 
     
     References
     ----------
-    1) Peter J. Huber, Elvezio M. Ronchetti, Robust Statistics Concomitant scale estimates, p.172
+    1) Peter J. Huber, Elvezio M. Ronchetti, Robust Statistics 
+        Concomitant scale estimates, p.172
     2) http://scikit-learn.org/stable/modules/generated/sklearn.linear_model.HuberRegressor.html
-    
     """
     
-    if Huber is False: raise ImportError("[Warning] HuberRegression is not available in this version of python. :(")
+    if Huber is False: 
+        raise ImportError("[Warning] HuberRegression is not available in " \
+                + "this version of python. :(")
     
-    #Remove nan's in data
+    # Remove invalid data (nan's and inf's)
     x, y = antifinite((x,y), unpack=True)
         
     if package == 'sklearn':
         
-        #Initialise the Theil-Sen Linear Regression Model
+        # Initialise the Theil-Sen Linear Regression Model
         estimator = HuberRegressor(epsilon=epsilon)
         
         #Fit the regression model to data. N.B. add extra dimension [:,None] to x to calculate intercept.
@@ -658,10 +661,11 @@ def rmse(predictions, targets):
     return rmse_val                                           #get the ^
 
 def R1to1(X, Y):
-    """This function calculates the 1:1 R Squared value which can be
-    defined as the strength of the dependent variable to the independent
-    variable rather than the strenth of the linear regression to to the
-    dependent variable
+    """
+    This function calculates the 1:1 R Squared value which can be 
+    defined as the strength of the dependent variable to the 
+    independent variable rather than the strenth of the linear 
+    regression to to the dependent variable.
     
     Parameters
     ----------
@@ -672,40 +676,52 @@ def R1to1(X, Y):
         
     NOTE: Requires numpy arrays to conduct element-wise operations!    
     """
-    
+
     #Remove nan values from both model and measured datasets
-    X,Y = antinan(np.array([X,Y]), unpack=True)
-    
+    X,Y = antinan((X,Y), unpack=True)
+
     #Calculate the 1:1 R^2 from the remaining data
-    SStot = np.sum((X-np.mean(X))**2)
-    SSres = np.sum((X-Y)**2)
-    Rsquared = 1 - SSres/SStot
-    
+    SStot = np.sum((X - np.mean(X))**2)
+    SSres = np.sum((X - Y)**2)
+    Rsquared = 1 - SSres / SStot
+
     return Rsquared    
 
-def RMSE(f,x):
-    """Calculates the root mean square error of the data between x and y.
+def RMSE(f, x):
+    """
+    Calculates the root mean square error of the data between x and y.
     
     Parameters
     ----------
     f, x : array_like
-        Input data which must have the same dimensions. The index values must also match up for 
-        the RMSE to be meaningful. i.e. for all values of f there must be a corresponding x value.
-        N.B. f is defined as your model variable and x as your measured variable.
+        Input data which must have the same dimensions. The index 
+        values must also match up for the RMSE to be meaningful. i.e. 
+        for all values of f there must be a corresponding x value. 
+        
+        N.B. f is defined as your model variable and x as your measured 
+        variable.
     """
-    
+
     f = np.asarray(f)
     x = np.asarray(x)
-    
+
     f, x = antinan((f,x), unpack=True)
-    
-    if f.size != x.size: raise ValueError("[gu.RMSE] Inputs f and x must have equal dimensions. Got (%s, %s)" % (f.size, x.size))
-    if (f.size == 0) | (x.size == 0): ValueError("[gu.RMSE] Inputs f and x must have data inside them. Go sizes of (%s, %s) for f and x respectively." % (f.size, x.size))
-    
+
+    # Check to see both inputs have equal size
+    if f.size != x.size: 
+        raise ValueError("[gu.RMSE] Inputs f and x must have equal " \
+                         "dimensions. Got (%s, %s)" % (f.size, x.size))
+
+    # Check neither inputs has a size 0
+    if (f.size == 0) | (x.size == 0): 
+        raise ValueError("[gu.RMSE] Inputs f and x must have data inside " \
+                         "them. Go sizes of (%s, %s) for f and x " \
+                         "respectively." % (f.size, x.size))
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        
-        return np.sqrt(np.sum((f - x)**2)/f.size)
+
+        return np.sqrt(np.sum((f - x)**2) / f.size)
 
 def fstat(f, y, k=1, p_value=True):
     """Calculates the f-statistic from the fitted data, f and observed data, y.
@@ -846,6 +862,9 @@ def stats(array, extend=True, axis=None, output=False):
             return np.array([np.nan]*14)
         else:
             return np.array([np.nan]*5)
+    
+    # When array is not None, ensure it is numpy array
+    array = np.atleast_1d(array)
     
     if extend:
         if array.size == 0:
@@ -1083,7 +1102,9 @@ def AICc(model, endog, k):
     
     return AIC(model, endog, k) + (2 * k**2 + 2 * k) / (np.size(endog) - k - 1)
         
-def ensemble(xdata, ydata, bins, average=('mean', 'median'), method='ma', mode=False, undersample=False, slim=False, usestride=False, confidence_intervals='standard', x_err=False, unpack=False):
+def ensemble(xdata, ydata, bins, average=('mean', 'median'), method='ma', 
+        undersample=False, slim=False, usestride=False, 
+        confidence_intervals='standard', x_err=False, unpack=False):
     """Averages the ydata set by binning the xdata set into bins of equal elements.
     
     Parameters
@@ -1109,7 +1130,6 @@ def ensemble(xdata, ydata, bins, average=('mean', 'median'), method='ma', mode=F
         Final method is 'bootstrap' which slowly increases the number of data elements
         in each bin until the entire population is in one bin. Then the reverse occurs
         when the first elements are removed one by one until only one element remains.
-    mode : DEPRECIATED
     undersample : boolean, optional
         Specify if you should average the areas of data that are under sampled. Default
         is false and therefore does not average the under sample data. When set to True
@@ -1173,15 +1193,8 @@ def ensemble(xdata, ydata, bins, average=('mean', 'median'), method='ma', mode=F
     3) Now supports correct assessment of confidence intervals when the median statistic is used.
     
     """
-    
-    if mode is not False: 
-        FutureWarning("[gu.ensemble] mode is now depreciated. Use method kwarg instead. For now we'll do the heavy lifting for you!")
-        if mode is True:
-            method = 'ma'
-        else:
-            method = mode
-        
-    #Sort data by ascending xdata
+
+    # Sort data by ascending xdata
     mask = np.argsort(xdata, kind='mergesort')
     ydata = ydata[mask].astype(float)
     xdata = xdata[mask].astype(float)
@@ -1245,8 +1258,7 @@ def ensemble(xdata, ydata, bins, average=('mean', 'median'), method='ma', mode=F
                         
                         #Calculate Boundaries
                         Bin_Size = np.tile(data_bin_x.shape[1], data_bin_x.shape[0]) if slim is False else np.zeros(MidPoints.size)
-                        #Boundaries = [MidPoints[0], MidPoints[-1]]
-                        
+
                         # Calculate confidence intervals for xdata
                         if x_err:
                             if confidence_intervals == 'standard':
@@ -1377,37 +1389,15 @@ def ensemble(xdata, ydata, bins, average=('mean', 'median'), method='ma', mode=F
                     Average = np.nanmean(data_bin_y, axis=1)
                 elif ydata_average == 'sum':
                     Average = np.nansum(data_bin_y, axis=1)
-                SE = np.nanstd(data_bin_y, axis=1)/np.sqrt(Bin_Size) if ydata_average == 'mean' else boot.ci(data_bin_y.T, lambda x: np.median(x, axis=0)).ptp(axis=0)
-                                
-                # sys.exit()
-                
-                # #Group data into specified bins
 
-                # data_mask = searchsorted(bins, xdata)
-                # max_size = np.max(np.bincount(data_mask))
-                
-                # MidPoints = bins
-                
-                # #print("Average", np.nanmin(ydata), np.nanmax(ydata), np.nanmean(ydata), np.nanmedian(ydata))
-                
-                # data_mask_full = [(bins[data_mask] == bin) for bin in bins]
-                # Bin_Size = np.array([ydata[mask].size for mask in data_mask_full], dtype=float)
-                
-                # ydata_average = average if isinstance(average, str) else average[1]
-                
-                # #Calculate Average and Standard Error
-                # print("max_size - ydata[mask].size", max_size - ydata[mask].size)
-                # data_bin_y = np.array([np.pad(ydata[mask], (0, max_size - ydata[mask].size), 'constant', constant_values=np.nan) for mask in data_mask_full], dtype=float)
-                # if ydata_average == 'median':
-                    # Average = np.nanmedian(data_bin_y, axis=1) 
-                # elif ydata_average == 'mean':
-                    # Average = np.nanmean(data_bin_y, axis=1)
-                # elif ydata_average == 'sum':
-                    # Average = np.nansum(data_bin_y, axis=1)
-                # SE = np.nanstd(data_bin_y, axis=1)/np.sqrt(Bin_Size)
-                
-                #print("Average", np.nanmin(Average), np.nanmax(Average), np.nanmean(Average), np.nanmedian(Average))
-        
+                # Calculate Confidence Limit
+                if confidence_intervals == 'standard':
+                    SE = 1.96 * np.nanstd(data_bin_y, axis=1) / np.sqrt(np.size(data_bin_y, axis=1)) if ydata_average == 'mean' else 1.96 * (1.253 * np.nanstd(data_bin_y, axis=1) / np.sqrt(np.size(data_bin_y, axis=1)))
+                elif confidence_intervals == 'bootstrap':
+                    SE = boot.ci(data_bin_y.T, lambda x: np.mean(x, axis=0)).ptp(axis=0) if ydata_average == 'mean' else boot.ci(data_bin_y.T, lambda x: np.median(x, axis=0)).ptp(axis=0)
+                else:
+                    raise ValueError("[gu.ensemble] confidence_intervals was incorrectly specified. We got %s. Available options are: 'standard', 'bootstrap'" % confidence_intervals)
+                    
         else:
             """Groups the data using bootstrapping method"""
             
@@ -1433,7 +1423,7 @@ def ensemble(xdata, ydata, bins, average=('mean', 'median'), method='ma', mode=F
         if slim is False:
             return np.vstack((MidPoints, Average, xdata_se, SE, Bin_Size, data_bin_y.T)).T if x_err else np.vstack((MidPoints, Average, SE, Bin_Size, data_bin_y.T)).T
         else:
-            return np.vstack((MidPoints, Average, xdata_se, SE)) if x_err else np.vstack((MidPoints, Average, SE)) 
+            return np.vstack((MidPoints, Average, xdata_se, SE)).T if x_err else np.vstack((MidPoints, Average, SE)).T
     else:
         if slim is False:
             return MidPoints, Average, xdata_se, SE, Bin_Size, data_bin_y.T if x_err else MidPoints, Average, SE, Bin_Size, data_bin_y.T

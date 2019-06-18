@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 from datetime import datetime
 
-from .system import iszero, isval
+from .system import iszero, isval, isarray
 from .manipulation import array, flatten
 from .datetime64 import isnat, dt2hours, hours2dt
 
@@ -27,7 +27,7 @@ def _simple_slice(arr, inds, axis):
 
     return arr[tuple(sl)]
 
-def _antiany(arr, func, axis=1, unpack=False, sortby=False, return_mask=False):
+def _antiany(arr, func, axis=1, how='any', unpack=False, sortby=False, return_mask=False):
     """
     Worker function to remove any value specified using func along a
     specific axis.
@@ -56,7 +56,10 @@ def _antiany(arr, func, axis=1, unpack=False, sortby=False, return_mask=False):
             
             axis = 0 : column wise
             axis = 1 : row wise (DEFAULT)
-            
+    how : str, optional
+        Test whether the entire axis contains an invalid value or whether
+        only 1 invalid value allows removal. Only works on 2D data and
+        uses the axis parameter. Default is 'any'.
     unpack : boolean, optional
         Determines whether to unpack the array into individual columns,
         useful if you originally had N column arrays which you want to 
@@ -102,7 +105,11 @@ def _antiany(arr, func, axis=1, unpack=False, sortby=False, return_mask=False):
         arr = np.asarray(arr).T
     else:   
         arr = np.asarray(arr)
-
+    
+    # Check if arr has any data
+    if arr.size == 0:
+        return np.array([])
+    
     # For 1D arrays
     if arr.ndim == 1:
 
@@ -123,7 +130,12 @@ def _antiany(arr, func, axis=1, unpack=False, sortby=False, return_mask=False):
     elif arr.ndim > 0:
 
         # Determine index for all nan values in each column
-        mask = ~func(arr).any(axis=axis)
+        if how == 'any':
+            mask = ~func(arr).any(axis=axis)
+        elif how == 'all':
+            mask = ~func(arr).all(axis=axis)
+        else:
+            raise ValueError("how parameter can only be either 'all' or 'any'")
 
         # Return mask if necessary
         if return_mask:
@@ -144,7 +156,8 @@ def _antiany(arr, func, axis=1, unpack=False, sortby=False, return_mask=False):
     else:
         return arr_noany
 
-def antifinite(arr, axis=1, andxor=True, unpack=False, sortby=False, return_mask=False, oldmethod=False):
+def antifinite(arr, axis=1, how='any', andxor=True, unpack=False, sortby=False, 
+        return_mask=False, oldmethod=False):
     """
     Removes any np.inf and np.nan values from arr along axis.
     
@@ -246,58 +259,123 @@ def antifinite(arr, axis=1, andxor=True, unpack=False, sortby=False, return_mask
 
     else:
         return _antiany(arr, lambda x: ~np.isfinite(x), axis=axis,
-                        unpack=unpack, sortby=sortby, return_mask=return_mask)
+                how=how, unpack=unpack, sortby=sortby, 
+                return_mask=return_mask)
 
-def antinan(arr, axis=1, unpack=False, sortby=False, return_mask=False):
+def antinan(arr, axis=1, how='any', unpack=False, sortby=False, 
+        return_mask=False):
     """
     Removes any np.nan values from arr along axis.
     
     See _antiany for __doc__
     """
 
-    return _antiany(arr, np.isnan, axis=axis, unpack=unpack, sortby=sortby,
-                    return_mask=return_mask)
-    
-def antiinf(arr, axis=1, unpack=False, sortby=False, return_mask=False):
+    return _antiany(arr, np.isnan, axis=axis, how=how, unpack=unpack, 
+            sortby=sortby, return_mask=return_mask)
+
+def antiinf(arr, axis=1, how='any', unpack=False, sortby=False, 
+        return_mask=False):
     """
     Removes any np.inf values from arr along axis.
     
     See _antiany for __doc__
     """
 
-    return _antiany(arr, np.isinf, axis=axis, unpack=unpack, sortby=sortby,
-                    return_mask=return_mask)
+    return _antiany(arr, np.isinf, axis=axis, how=how, unpack=unpack, 
+            sortby=sortby, return_mask=return_mask)
 
-def antinat(arr, axis=1, unpack=False, sortby=False, return_mask=False):
+def antinat(arr, axis=1, how='any', unpack=False, sortby=False, 
+        return_mask=False):
     """
     Removes any NaT datetimes from arr along axis.
     
     See _antiany for __doc__
     """
 
-    return _antiany(arr, isnat, axis=axis, unpack=unpack, sortby=sortby,
-                    return_mask=return_mask)      
+    return _antiany(arr, isnat, axis=axis, how=how, unpack=unpack, 
+            sortby=sortby, return_mask=return_mask)      
 
-def antizero(arr, axis=1, unpack=False, sortby=False, return_mask=False):
+def antizero(arr, axis=1, how='any', unpack=False, sortby=False, 
+        return_mask=False):
     """
     Removes any zero values from arr along axis.
     
     See _antiany for __doc__
     """
 
-    return _antiany(arr, iszero, axis=axis, unpack=unpack, sortby=sortby,
-                    return_mask=return_mask)      
+    return _antiany(arr, iszero, axis=axis, how=how, unpack=unpack, 
+            sortby=sortby, return_mask=return_mask)      
 
-def antival(arr, val, axis=1, unpack=False, sortby=False, return_mask=False):
+def antival(arr, val, axis=1, how='any', unpack=False, sortby=False, 
+        return_mask=False):
     """
     Removes any values from arr along axis.
     
     See _antiany for __doc__
     """
 
-    return _antiany(arr, lambda x: isval(x, val), axis=axis, unpack=unpack,
-                    sortby=sortby, return_mask=return_mask)      
+    return _antiany(arr, lambda x: isval(x, val), axis=axis, how=how, 
+            unpack=unpack, sortby=sortby, return_mask=return_mask)      
 
+def conditional(arr, conditions, operators=None, verbose=False):
+    """
+    Returns a boolean array of the conditions on arr, taking into account
+    invalid values.
+    
+    conditions needs to be an array_like containing string of conditions
+    
+    e.g. conditions = ("> 2", "< 10")
+    
+    operators needs to be an array_like containing string of operations
+    
+    e.g. operators = ("&",)
+    
+    with length 1 less than conditions.
+    
+    Overall this follows a conditions as so
+
+    Reference
+    ---------
+    https://stackoverflow.com/a/25346972
+    """
+    
+    if not isarray(arr):
+        raise ValueError("arr needs to be array_like")
+    if len(conditions) > 1 and operators is None:
+        raise ValueError("need to specifiy operators if more than 1 conditions is specified")
+    if len(conditions) - len(operators) != 1:
+        raise ValueError("operators needs to have a length 1 less than conditions")
+    
+    # Convert arr to numpy if required
+    arr = np.atleast_1d(arr)
+    conditions = np.atleast_1d(conditions)
+    operators = np.atleast_1d(operators)
+    
+    if (conditions.ndim > 1) or (operators.ndim > 1): 
+        raise ValueError("conditions and operators must be 1 dimensional")
+    
+    # Determine invalid values
+    mask = np.isfinite(arr)
+    
+    # Loop through each conditional
+    if conditions.size > 1:
+        full_conditions = ''
+        for cond, op in zip(conditions, operators):
+            full_conditions += '(arr[mask] ' + cond + ') ' + op + ' '
+            
+        full_conditions += '(arr[mask] ' + conditions[-1] + ')'
+    else:
+        full_conditions = 'arr[mask] ' + cond
+    
+    if verbose:
+        print("full_conditions", full_conditions)
+    
+    # Perform conditions
+    mask[mask] &= eval(full_conditions)
+    
+    # Return mask
+    return mask
+    
 def nan_helper(y):
     """
     Helper to handle indices and logical indices of NaNs.

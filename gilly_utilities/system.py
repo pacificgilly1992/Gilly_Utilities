@@ -9,6 +9,7 @@ import signal
 import logging
 import collections
 import warnings
+from datetime import datetime
 
 if getattr(sys.version_info, 'major') == 2:
     import urllib2
@@ -25,6 +26,8 @@ import numpy as np
 import pandas as pd
 
 from .extras import cprint
+import gilly_utilities.datetime64
+import gilly_utilities.manipulation
 
 class DelayedKeyboardInterrupt(object):
     """Forces an operation to complete when this class function is called before an 
@@ -104,13 +107,13 @@ class unbuffered(object):
     def __getattr__(self, attr):
         return getattr(self.stream, attr)
 
-class suppress_output(object):
+class antiverbose(object):
     """Suppresses the output of the sys.stdout.write and so no output
     will be visible on the console.
     
     To use this class place in code like so,
     
-    with gu.suppress_output():
+    with gu.antiverbose():
         ...
         
     ...
@@ -121,12 +124,71 @@ class suppress_output(object):
     https://stackoverflow.com/a/45669280/8765762
     """
     
+    def __init__(self, verbose=False):
+        """
+        Specify whethere you want to turn on print statements or not
+        """
+        
+        self.verbose = verbose
+        
     def __enter__(self):
-        self._original_stdout = sys.stdout
-        sys.stdout = open(os.devnull, 'w')
+        
+        if not self.verbose:
+            self._original_stdout = sys.stdout
+            sys.stdout = open(os.devnull, 'w')
+            
     def __exit__(self, type, value, traceback):
-        sys.stdout.close()
-        sys.stdout = self._original_stdout
+    
+        if not self.verbose:
+            sys.stdout.close()
+            sys.stdout = self._original_stdout
+
+def verbose_class(func):
+    """
+    This decorator can be used to suppress the output of all stdout
+    inside a class function. To toggle this function you need to set
+    self.verbose as either True or False.
+    
+    Example
+    -------
+    >>> class fun(object):
+    
+    >>>     def __init__(self, verbose=False):
+            self.verbose = verbose
+            return
+        
+    >>> @dec_verbose_class
+    >>> def func(self):
+    >>>     print("Hello")
+        
+    >>> bob = fun(True)
+    >>> bob.func()
+    "Hello"
+    >>> bob = fun(False)
+    >>> bob.func()
+    >>> 
+    
+    References
+    ----------
+    https://stackoverflow.com/a/5929165/8765762
+    https://stackoverflow.com/a/7590709/8765762
+    """
+    
+    def wrapper(self, *args, **kwargs):
+        if not self.verbose:
+        
+            # block all printing to the console
+            sys.stdout = open(os.devnull, 'w')
+            # call the method in question
+            value = func(self, *args, **kwargs)
+            # enable all printing to the console
+            sys.stdout = sys.__stdout__
+            # pass the return value of the method back
+            return value
+        
+        else:
+            return func(self, *args, **kwargs)
+    return wrapper
 
 def isarray(arg):
     """Checks whether arg is array_like (e.g. tuple, list, np.ndarray, etc.)"""
@@ -229,6 +291,10 @@ def isval(arg, value, keepshape=True):
     arg = np.atleast_1d(arg)
     zero_full = np.zeros(arg.shape, dtype=bool)
     
+    # Check if arg has any data
+    if arg.size == 0:
+        return False
+    
     # Create index array of arg to reorganise after we need to flatten arg
     index = np.arange(arg.size).reshape(arg.shape)
     
@@ -297,17 +363,18 @@ def Print_Output(delay_time, t_start, it_tot, it):
   print("Time Left (s): ", "%.0f" % ((it_tot-it)*((time.time()-t_start)/it)))
   print("Events Left: ", it_tot-it)
 
-def File_Checker(files, dates, date_range, file_size_min=0):
+def file_checker(dates, date_range, files=None, file_size_min=0, yes_file=1,
+        no_file=0, corrupt_file=2):
     """Checks the availability of files
     
     Parameters
     ----------
-    files : numpy array
-        A list of file locations to be tested
     dates : numpy object array
         An array of datetimes corresponding to each file location in files.
     date_range : nump object array
         An array over the list of dates you want to test.
+    files : numpy array
+        A list of file locations to be tested
     file_size_min : int, optional
         The minimum file size (in bytes) required to be valid. This is useful for files that
         exist but don't contain any data.
@@ -320,18 +387,94 @@ def File_Checker(files, dates, date_range, file_size_min=0):
         threshold.        
     """
     
-    File_Availability = []
-    for i in xrange(date_range.shape[0]):
-        if np.sum(dates == date_range[i]) == 1:            
-            if os.stat(files[dates == date_range[i]][0]).st_size > file_size_min:
-                File_Availability.append(1)
+    # if files are not specified, then only check dates occur in dates range.
+    # This method is much quicker, as you can use numpy element-wise
+    # operations and don't have to check file size of every file.
+    if files is None:
+        # Create zero array matching date_range length
+        File_Availability = np.zeros(date_range.size)
+        
+        # If date is found in date_range then set File_Availability to 1
+        File_Availability[np.in1d(date_range, dates)] = 1
+        
+        # Return data
+        return File_Availability
+    else:
+        # Create zero array matching date_range length
+        File_Availability = np.zeros(date_range.size)
+        File_Availability = []
+        for i in xrange(date_range.shape[0]):
+            if np.sum(dates == date_range[i]) == 1:            
+                if os.stat(files[dates == date_range[i]][0]).st_size > file_size_min:
+                    File_Availability.append(yes_file)
+                else:
+                    File_Availability.append(corrupt_file)
             else:
-                File_Availability.append(2)
-        else:
-            File_Availability.append(0)
-            
-    return np.array(File_Availability, dtype=float)
+                File_Availability.append(no_file)
+                
+        return np.array(File_Availability, dtype=float)
 
+def file_checker2(dates, date_range, files=None, file_size_min=0, yes_file=1,
+        no_file=0, corrupt_file=2):
+    """Checks the availability of files
+    
+    Parameters
+    ----------
+    dates : numpy object array
+        An array of datetimes corresponding to each file location in files.
+    date_range : nump object array
+        An array over the list of dates you want to test.
+    files : numpy array
+        A list of file locations to be tested
+    file_size_min : int, optional
+        The minimum file size (in bytes) required to be valid. This is useful for files that
+        exist but don't contain any data.
+
+    Returns
+    -------
+    File_Availability : list
+        A boolean list with 1 for file exists and is above the minimum file size threshold
+        and zero for either file doesn't exist or file is below or equal to minimum file
+        threshold.        
+    """
+
+    # Create zero array matching date_range length
+    File_Availability = np.zeros(date_range.size)
+    
+    # Get mask for dates in date_range
+    mask_date = np.in1d(date_range, dates)
+
+    # If date is found in date_range then set File_Availability to yes_file
+    File_Availability[mask_date] = yes_file
+        
+    # if files are not specified, then only check dates occur in dates range.
+    # This method is much quicker, as you can use numpy element-wise
+    # operations and don't have to check file size of every file.
+    if files is not None:
+
+        # Get file size for all files
+        file_sizes = []
+        for file in files:
+            try:
+                file_sizes.append(os.stat(file).st_size)
+            except OSError:
+                file_sizes.append(0)
+        
+        # Convert to numpy array to use element-wise ops.
+        file_sizes = np.array(file_sizes)
+        
+        # Test which files are smaller than expected
+        mask_filesize = file_sizes <= file_size_min
+
+        # Get date_range for dates that have files too small
+        mask_datesfile = np.in1d(date_range, dates[mask_filesize])
+
+        # Combine mask_filesize with mask_date
+        File_Availability[mask_datesfile] = corrupt_file
+    
+    # Return data
+    return File_Availability
+    
 def File_Aligner_NoSize(files, dates, date_range):
     """Checks the availability of files
     

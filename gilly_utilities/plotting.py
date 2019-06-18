@@ -276,7 +276,7 @@ def fixed_aspect_ratio(ax, ratio=1, adjustable=None, xscale='linear', yscale='li
     Notes
     -----
     This function must be called after all plotting has been completed.
-    i.e. just before plt.savefig.
+    i.e. just before plt.savefig and time_axis if used.
     
     Reference
     ---------
@@ -285,10 +285,16 @@ def fixed_aspect_ratio(ax, ratio=1, adjustable=None, xscale='linear', yscale='li
     https://stackoverflow.com/a/24538164
     """
     
+    # Check if minor ticks were enabled
+    if len(ax.xaxis.get_minor_ticks()) > 0:
+        minor_ticks = True
+    else:
+        minor_ticks = False
+
     # Set scales for both axes
     ax.set_xscale(xscale)
     ax.set_yscale(yscale)
-            
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
     
@@ -319,13 +325,7 @@ def fixed_aspect_ratio(ax, ratio=1, adjustable=None, xscale='linear', yscale='li
 
         # Add support for mixed scale axes in Matplotlib
         elif xscale != yscale:
-            
-            # Check if minor ticks were enabled
-            if len(ax.xaxis.get_minor_ticks()) > 0:
-                minor_ticks = True
-            else:
-                minor_ticks = False
-                
+
             # Get the figure size in real coordinates:
             f = plt.gcf()
             fwidth = f.get_figwidth()
@@ -357,13 +357,13 @@ def fixed_aspect_ratio(ax, ratio=1, adjustable=None, xscale='linear', yscale='li
             
             # Set the new position for the plot
             ax.set_position(bb)
-            
-            # Turn on minor_ticks
-            if minor_ticks:
-                ax.tick_params(axis='both', which='both')
 
         else:
             raise ValueError("Something went really wrong. xscale != yscale and xscale == yscale was found to be both False!")
+
+    # Turn on minor_ticks if previously set
+    if minor_ticks:
+        ax.minorticks_on()
 
     return    
 
@@ -450,21 +450,22 @@ def hide_axis(plt=None, ax=None, x_or_y=None, remove_gridlines=False, remove_lab
         
     return
 
-def time_axis(date_range, plt=None, ax=None, format='auto', xlabel=None, rotation=None):
+def time_axis(date_range, plt=None, ax=None, num_ticks=6, auto_format=True, 
+        xlabel=None, rotation=None, date_sep="-", time_sep=":"):
     """
     Sets up the x axis using datetime information.
     
     Parameters
     
     """
-    
+
     # Error check input parameters
     if plt is None and ax is None: 
         raise ValueError("[gu.time_axis]: Must specify either plt or ax plots.")
     if plt is not None and ax is not None: 
         raise ValueError("[gu.time_axis]: Can only specify either plt or ax, not both.")
-    if (format != 'auto') ^ isinstance(format, int):
-        raise ValueError("[gu.time_axis]: format must be either 'auto' or an integer.")
+    if not isinstance(num_ticks, int):
+        raise ValueError("[gu.time_axis]: num_ticks must be an integer.")
     if not isarray(date_range):
         raise ValueError("[gu.time_axis]: date_range must be array_like containing two python datetime objects")
     if not isinstance(date_range[0], datetime) or not isinstance(date_range[1], datetime):
@@ -483,36 +484,47 @@ def time_axis(date_range, plt=None, ax=None, format='auto', xlabel=None, rotatio
         warnings.simplefilter("ignore")
         
         # If auto has been set for format
-        if format == 'auto':
+        if auto_format:
         
             # Calculate the time length in seconds between datetimes
             time_length = (date_range[1] - date_range[0]).total_seconds() + 1
             
+            # Check time_length is bigger than 0
+            if time_length == 0:
+                raise ValueError("Daterange are too similar. Got interval of 0. Please increase the time between ranges. N.B. time_axis only supports second precision.")
+            
             # Specify different tick requirements dependent on the number of seconds between datetimes
             if time_length/86400 <= 2:
                 # Short Range: ~Single Day
-                myFmt = DateFormatter('%H:%M')
+                myFmt = DateFormatter('%H' + time_sep + '%M')
                 ax.xaxis.set_major_formatter(myFmt)
-                ax.xaxis.set_major_locator(MinuteLocator(interval=int(np.floor((time_length/60)/6))))
+                ax.xaxis.set_major_locator(MinuteLocator(interval=int(np.floor((time_length/60)/num_ticks))))
             elif time_length/86400 <= 7:
                 # Medium Range: ~Multiple Days
-                myFmt = DateFormatter('%Y-%m-%d %H:%M')
+                myFmt = DateFormatter('%Y' + date_sep + '%m' + date_sep + '%d %H' + time_sep + '%M')
                 ax.xaxis.set_major_formatter(myFmt)
-                ax.xaxis.set_major_locator(HourLocator(interval=int(round((time_length/3600)/6))))
+                ax.xaxis.set_major_locator(HourLocator(interval=int(round((time_length/3600)/num_ticks))))
             else:
                 # Long Range: ~Months
-                myFmt = DateFormatter('%Y-%m-%d')
+                myFmt = DateFormatter('%Y' + date_sep + '%m' + date_sep + '%d')
                 ax.xaxis.set_major_formatter(myFmt)
-                ax.xaxis.set_major_locator(DayLocator(interval=int(round((time_length/86400)/6))))
+                ax.xaxis.set_major_locator(DayLocator(interval=int(round((time_length/86400)/num_ticks))))
             
             if xlabel is None:
-                ax.set_xlabel('Time (UTC) between ' + date_range[0].strftime('%d/%m/%Y %H:%M:%S') + " and " + date_range[1].strftime('%d/%m/%Y %H:%M:%S'))
+                ax.set_xlabel('Time (UTC) between ' 
+                        + date_range[0].strftime('%Y' + date_sep + '%m' 
+                            + date_sep + '%d %H' + time_sep + '%M' 
+                            + time_sep + '%S') + " and " 
+                        + date_range[1].strftime('%Y' + date_sep + '%m' 
+                            + date_sep + '%d %H' + time_sep + '%M' 
+                            + time_sep + '%S'))
+                            
             elif xlabel is not False:
                 ax.set_xlabel(xlabel)
                 
         # If format is not set to 'auto'
         else:
-            ax.xaxis.set_major_locator(MultipleLocator(format))
+            ax.xaxis.set_major_locator(MultipleLocator(num_ticks))
             ax.set_xlabel('Time (UTC)')
     
     # Rotate the ticks as specified by rotation parameter
@@ -521,8 +533,8 @@ def time_axis(date_range, plt=None, ax=None, format='auto', xlabel=None, rotatio
             tick.set_rotation(rotation)
     
     # Need to draw figure before xtickslabels are populated
-    matplotlib.pyplot.draw()
-    return [item._text for item in ax.get_xticklabels()]
+    #matplotlib.pyplot.draw()
+    return ax.get_xticks(), [item._text for item in ax.get_xticklabels()]
 
 def match_ticks(ax1, ax2, tick_count=5, dec_limit=2, scale='linear'):
     """

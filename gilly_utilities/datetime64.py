@@ -342,7 +342,7 @@ def dt2hours(array_of_datetimes, epoch, checkback=False):
             if not isinstance(epoch, np.ndarray): epoch = np.datetime64(epoch) 
             if array_of_datetimes.dtype == 'O': #Object array
                 try:
-                    array_of_datetimes = toDatetime64(array_of_datetimes)
+                    array_of_datetimes = array_of_datetimes.astype('datetime64[s]')
                     
                     #Find all np.nat values in datetime
                     mask = isnat(array_of_datetimes)
@@ -368,7 +368,9 @@ def dt2hours(array_of_datetimes, epoch, checkback=False):
                 mask = isnat(array_of_datetimes)
                 
                 #Convert to hours
-                hours = (array_of_datetimes.astype('datetime64[s]') - epoch.astype('datetime64[s]')).astype('timedelta64[s]').astype(float)/3600
+                hours = (array_of_datetimes.astype('datetime64[s]') \
+                    - epoch.astype('datetime64[s]')).astype('timedelta64[s]').astype(np.float64) \
+                    / 3600
                 
                 #Convert original np.nat values to np.nan
                 hours[mask] = np.nan
@@ -383,7 +385,9 @@ def dt2hours(array_of_datetimes, epoch, checkback=False):
         array_of_datetimes = np.array(array_of_datetimes)
         
         #Convert to hours
-        hours = (array_of_datetimes.astype('datetime64[s]') - epoch.astype('datetime64[s]')).astype('timedelta64[s]').astype(float)/3600
+        hours = (array_of_datetimes.astype('datetime64[s]') \
+            - epoch.astype('datetime64[s]')).astype('timedelta64[s]').astype(np.float64) \
+            / 3600
         
         if checkback is False:
             return hours 
@@ -415,11 +419,11 @@ def isdatetime(arr):
     Determines whether array contains datetime elements.
     """
 
-    arr = np.asanyarray(arr)
+    arr = np.atleast_1d(arr)
 
     # First, test whether all values are datetime compatible (Quick-Easy method)
     try:
-        np.issubdtype(arr.dtype, np.datetime64)
+        arr.view('datetime64[s]')
         return np.full(arr.size, True, dtype=bool)
     except TypeError:
         # Second, test each element in turn
@@ -617,4 +621,3 @@ def addHourFrac(base_date, fractional_hours):
     
     #Add timedelta function to base_date
     return base_date + timedelta
-    
