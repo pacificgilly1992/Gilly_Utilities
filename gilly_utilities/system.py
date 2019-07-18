@@ -1,15 +1,13 @@
 from __future__ import print_function
 
-import sys
+import errno
+import logging
 import os
 import shutil
-import threading
-import errno
 import signal
-import logging
-import collections
+import sys
+import threading
 import warnings
-from datetime import datetime
 
 if getattr(sys.version_info, 'major') == 2:
     import urllib2
@@ -26,8 +24,7 @@ import numpy as np
 import pandas as pd
 
 from .extras import cprint
-import gilly_utilities.datetime64
-import gilly_utilities.manipulation
+
 
 class DelayedKeyboardInterrupt(object):
     """Forces an operation to complete when this class function is called before an 
@@ -80,10 +77,12 @@ class DelayedKeyboardInterrupt(object):
         if self.signal_received:
             self.ctrlslash_handler(*self.signal_received)
 
+
 class unbuffered(object):
-    """Forces the print statements to be written without the need for flushing. Useful for
+    """
+    Forces the print statements to be written without the need for flushing. Useful for
     sending print statements to text files when running python on a cluster.
-    
+
     Usage
     -----
     import sys
@@ -98,17 +97,22 @@ class unbuffered(object):
     
     def __init__(self, stream):
         self.stream = stream
+
     def write(self, data):
         self.stream.write(data)
         self.stream.flush()
+
     def writelines(self, datas):
         self.stream.writelines(datas)
         self.stream.flush()
+
     def __getattr__(self, attr):
         return getattr(self.stream, attr)
 
+
 class antiverbose(object):
-    """Suppresses the output of the sys.stdout.write and so no output
+    """
+    Suppresses the output of the sys.stdout.write and so no output
     will be visible on the console.
     
     To use this class place in code like so,
