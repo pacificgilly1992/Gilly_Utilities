@@ -7,6 +7,7 @@ import shutil
 import signal
 import sys
 import threading
+import traceback
 import warnings
 
 if getattr(sys.version_info, 'major') == 2:
@@ -27,7 +28,8 @@ from .extras import cprint
 
 
 class DelayedKeyboardInterrupt(object):
-    """Forces an operation to complete when this class function is called before an 
+    """
+    Forces an operation to complete when this class function is called before an
     operation. Handles Ctrl+C, Ctrl+Z and Ctrl+\ keyboard interrupts.
     
     Example
@@ -193,6 +195,31 @@ def verbose_class(func):
         else:
             return func(self, *args, **kwargs)
     return wrapper
+
+
+def simple_logger(**kwargs):
+    """
+    Adds built-in support for catching all uncaught exceptions and
+    prints out traceback as well.
+
+    :return:
+    """
+
+    # Setup logging
+    logging.basicConfig(**kwargs)
+    logging.captureWarnings(True)
+
+    # Get logger
+    logger = logging.getLogger(__name__)  # type: Logger
+
+    # Install exception handler
+    sys.excepthook = my_handler
+
+
+def my_handler(*exc_info):
+    text = "".join(traceback.format_exception(*exc_info))
+    logging.error("Unhandled exception: %s", text)
+    raise
 
 def isarray(arg):
     """Checks whether arg is array_like (e.g. tuple, list, np.ndarray, etc.)"""
