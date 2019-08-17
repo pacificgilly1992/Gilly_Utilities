@@ -1,15 +1,17 @@
 import sys
+import warnings
+from datetime import date, datetime
+from datetime import time as dttime
+from datetime import timedelta
+
 import numpy as np
 import pandas as pd
-import warnings, sys
-from datetime import date, datetime, timedelta
-from datetime import time as dttime
 
 from .system import isarray
 
 # Compatability for python3
 if getattr(sys.version_info, 'major') == 3:
-	xrange = range
+    xrange = range
 
 def time32(when='now', dtype='str'):
     """Output the time in different formats
@@ -140,10 +142,10 @@ def Excel_to_Python_Date(excel_time, expand=None, format=None, strip=True):
             Python_Year[i] = Python_Datetime[i].year
             Python_YD[i]     = Python_Datetime[i].timetuple().tm_yday
             Python_H[i] = toHourFraction(Python_Datetime[i])
-    
+
     if strip == True:
         Python_Datetime = toDateOnly(Python_Datetime)
-    
+
     return Python_Datetime if expand is None else (Python_Datetime, Python_Date, Python_Year, Python_YD, Python_H)
         
 def toHourFraction(date):
