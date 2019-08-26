@@ -115,3 +115,5 @@ dmypy.json
 
 # User defined
 *.stackdump
+.idea/
+.vscode/
