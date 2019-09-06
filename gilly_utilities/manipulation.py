@@ -1,18 +1,21 @@
-from __future__ import print_function, division
-import numpy as np
-import sys, warnings
+from __future__ import division, print_function
+
+import sys
 import time as systime
+import warnings
 from copy import deepcopy
 
 import gilly_utilities.system
+import numpy as np
 
 # Compatability for python3
 if getattr(sys.version_info, 'major') == 3:
     xrange = range
 
 class array:
-    """Fastest method of combining data for very large dataset. Much faster than
-    np.append, or x.extend/append. Boo
+    """
+    Fastest method of combining data for very large dataset. Much faster than
+    np.append, or x.extend/append.
     
     Example
     -------

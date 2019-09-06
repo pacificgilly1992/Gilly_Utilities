@@ -117,3 +117,4 @@ dmypy.json
 *.stackdump
 .idea/
 .vscode/
+.vscode/settings.json
